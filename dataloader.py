@@ -2,6 +2,7 @@
 from configparser import Interpolation
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 import json
 import os
 from PIL import Image
@@ -13,7 +14,7 @@ import numpy as np
 class TEETHdataset(Dataset):
     def __init__(self):
         
-        json_path = '/home/ubuntu/researches/pasamedi/data/teeth_imgs/teeth-labeling-job/manifests/output/output.manifest'
+        json_path = './data/kjh-teeth-labeling/manifests/intermediate/1/output.manifest'
 
         if not os.path.exists(json_path):
             raise Exception("No json_path")
@@ -25,8 +26,8 @@ class TEETHdataset(Dataset):
                 pair_list.append(json.loads(line))        
         
         self.pair_list = pair_list
-        self.img_dir_path = './data/teeth_imgs'
-        self.mask_dir_path = './data/teeth_imgs/teeth-labeling-job/annotations/consolidated-annotation/output'
+        self.img_dir_path = './data'
+        self.mask_dir_path = './data/kjh-teeth-labeling/annotations/consolidated-annotation/output'
 
         if not os.path.exists(self.img_dir_path):
             raise Exception("No img_path")
@@ -40,7 +41,7 @@ class TEETHdataset(Dataset):
 
         pair = self.pair_list[idx]
         img_name = os.path.basename(pair['source-ref'])
-        mask_name = os.path.basename(pair['teeth-labeling-job-ref'])
+        mask_name = os.path.basename(pair['kjh-teeth-labeling-ref'])
         img_path = os.path.join(self.img_dir_path, img_name)
         mask_path = os.path.join(self.mask_dir_path, mask_name)
 
@@ -68,6 +69,21 @@ class TEETHdataset(Dataset):
 
     def __len__(self):
         return len(self.pair_list)
+
+def test():
+    #Dataloader#
+    dataset = TEETHdataset()
+    dataloader = DataLoader(dataset, batch_size = 20, shuffle = True)
+
+    img, mask = next(iter(dataloader))
+
+    print(img.shape)
+    print(mask.shape)
+
+
+
+if __name__=="__main__":
+    test()
 
 
 
