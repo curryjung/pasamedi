@@ -12,9 +12,9 @@ import numpy as np
 
 
 class TEETHdataset(Dataset):
-    def __init__(self):
+    def __init__(self, transform_type = "resize"):
         
-        json_path = './data/kjh-teeth-labeling/manifests/intermediate/1/output.manifest'
+        json_path = '/home/ubuntu/researches/pasamedi/data/images/kjh-teeth-labeling/manifests/output/output.manifest'
 
         if not os.path.exists(json_path):
             raise Exception("No json_path")
@@ -26,16 +26,21 @@ class TEETHdataset(Dataset):
                 pair_list.append(json.loads(line))        
         
         self.pair_list = pair_list
-        self.img_dir_path = './data'
-        self.mask_dir_path = './data/kjh-teeth-labeling/annotations/consolidated-annotation/output'
+        self.img_dir_path = '/home/ubuntu/researches/pasamedi/data/images'
+        self.mask_dir_path = '/home/ubuntu/researches/pasamedi/data/images/kjh-teeth-labeling/annotations/consolidated-annotation/output'
 
         if not os.path.exists(self.img_dir_path):
             raise Exception("No img_path")
         if not os.path.exists(self.mask_dir_path):
             raise Exception("No mask_path")
 
-        self.img_transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((224,224))])
-        self.mask_transform = transforms.Compose([transforms.Resize((224,224), interpolation=Image.NEAREST)])
+        self.transform_type = transform_type
+
+        if transform_type=="resize":
+            self.img_transform = transforms.Compose([transforms.ToTensor(),transforms.Resize((224,224))])
+            self.mask_transform = transforms.Compose([transforms.Resize((224,224), interpolation=Image.NEAREST)])
+
+        self.totensor = transforms.ToTensor()
 
     def __getitem__(self , idx):
 
@@ -51,17 +56,26 @@ class TEETHdataset(Dataset):
         img = Image.open(img_path)
         mask = Image.open(mask_path)
 
-        img_array = np.array(img)
-        img = self.img_transform(img)
-        
+        if self.transform_type=="resize": # convert image size->(224,224)
+            img_array = np.array(img)
+            img = self.img_transform(img)
+            
 
-        mask = np.array(mask)
-        
-        mask = torch.as_tensor(mask, dtype=torch.uint8)
-        mask = mask.unsqueeze(0)
-        mask = self.mask_transform(mask)
-        mask = mask.squeeze(0)
-        mask = mask.type(dtype=torch.LongTensor)
+            mask = np.array(mask)
+            
+            mask = torch.as_tensor(mask, dtype=torch.uint8)
+            mask = mask.unsqueeze(0)
+            mask = self.mask_transform(mask)
+            mask = mask.squeeze(0)
+            mask = mask.type(dtype=torch.LongTensor)
+        elif self.transform_type=="original":# use original size of image
+            img = self.totensor(img)
+            mask = np.array(mask)
+            mask = torch.from_numpy(mask)
+            mask = mask.type(dtype=torch.LongTensor)
+        elif self.transform_type=="crop":
+            pass
+            
 
 
         return img, mask
@@ -72,13 +86,10 @@ class TEETHdataset(Dataset):
 
 def test():
     #Dataloader#
-    dataset = TEETHdataset()
+    dataset = TEETHdataset(resize = False)
     dataloader = DataLoader(dataset, batch_size = 20, shuffle = True)
 
     img, mask = next(iter(dataloader))
-
-    print(img.shape)
-    print(mask.shape)
 
 
 
