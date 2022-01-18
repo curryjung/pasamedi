@@ -21,17 +21,25 @@ class TeethDetectorLit(pl.LightningModule):
         pred = self(input)
         loss = self.criterion(pred,target)
         self.log("Loss/Train",loss,on_step=True,on_epoch=False)
-        self.logger.experiment.add_image("input",torch.Tensor.cpu(input[0]),self.current_epoch)
-        self.logger.experiment.add_image("target",torch.Tensor.cpu(target[0]),self.current_epoch,dataformats="HW")
-        self.logger.experiment.add_image("pred",torch.Tensor.cpu(torch.argmax(torch.exp(pred),dim=1)[0]),self.current_epoch,dataformats="HW")
+        self.logger.experiment.add_image("train_input",torch.Tensor.cpu(input[0]),self.current_epoch)
+        self.logger.experiment.add_image("train_target",torch.Tensor.cpu(target[0]),self.current_epoch,dataformats="HW")
+        self.logger.experiment.add_image("train_pred",torch.Tensor.cpu(torch.argmax(torch.exp(pred),dim=1)[0]),self.current_epoch,dataformats="HW")
 
 
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss, acc = self._shared_eval_step(batch,batch_idx)
-        self.log("val_loss", loss, prog_bar=True,on_step=True,on_epoch=False)
-        self.log("val_acc", acc, prog_bar= True,on_step=True,on_epoch=False)
+        loss, acc,imgs = self._shared_eval_step(batch,batch_idx)
+        self.log("val_loss", loss, prog_bar=True,on_step=True,on_epoch=True)
+        self.log("val_acc", acc, prog_bar= True,on_step=True,on_epoch=True)
+
+        input = imgs['input']
+        target = imgs['target']
+        pred = imgs['pred']
+
+        self.logger.experiment.add_image("val_input",torch.Tensor.cpu(input),self.current_epoch)
+        self.logger.experiment.add_image("val_target",torch.Tensor.cpu(target),self.current_epoch,dataformats="HW")
+        self.logger.experiment.add_image("val_pred",torch.Tensor.cpu(torch.argmax(torch.exp(pred),dim=1)[0]),self.current_epoch,dataformats="HW")
 
     def test_step(self,batch,batch_idx):
         pass
@@ -41,7 +49,10 @@ class TeethDetectorLit(pl.LightningModule):
         pred = self(input)
         loss = self.criterion(pred,target)
         acc = self.accuracy(pred,target)
-        return loss, acc
+
+        imgs = {'input' : input[0], 'target':target[0], 'pred': pred}
+
+        return loss, acc, imgs
 
     def accuracy(self,pred,target):
         pred = torch.argmax(torch.exp(pred),dim=1)
